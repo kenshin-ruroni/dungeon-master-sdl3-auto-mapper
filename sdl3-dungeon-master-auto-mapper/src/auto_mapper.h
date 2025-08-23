@@ -452,9 +452,10 @@ struct auto_mapper {
 			rooms[x + _numberOfBoxX * y].containsAmonster = true;
 			oldX = oldY = 0;
 		}
-
+		bool monster_is_visible_by_party = TestDirectPathOpen(x,y,_partyX,_partyY,StoneOrClosedFalseWall) == 0 || TestDirectPathOpen(x,y,_partyX,_partyY,BlockedTypeAHacked) == 0;
 		if ( found)
 		{
+					
 			// WARNING le monstre peut avoir bouge entre temps
 			// il faut en tenir compte
 
@@ -478,7 +479,8 @@ struct auto_mapper {
 					}
 					// on indique que la salle x,y contient le monstre
 					rooms[x + _numberOfBoxX * y].containsAmonster = true;
-					rooms[x + _numberOfBoxX * y].MonsterIsVisible = std::abs(m->x - _partyX) <= MAX_MONSTER_X && std::abs(m->y - _partyY) <= MAX_MONSTER_Y; 
+					bool monster_is_in_vicinity = std::abs(m->x - _partyX) <= MAX_MONSTER_X && std::abs(m->y - _partyY) <= MAX_MONSTER_Y; 
+					rooms[x + _numberOfBoxX * y].MonsterIsVisible = monster_is_visible_by_party && monster_is_in_vicinity;
 					draw_room(x + _numberOfBoxX * y,x,y);
 	
 	//		// le monstre ne peut etre visible
@@ -497,7 +499,7 @@ struct auto_mapper {
 		}
 
 
-		bool monster_is_visible_by_party = TestDirectPathOpen(x,y,_partyX,_partyY,StoneOrClosedFalseWall) == 0 || TestDirectPathOpen(x,y,_partyX,_partyY,BlockedTypeAHacked) == 0;
+
 		rooms[x + _numberOfBoxX * y].MonsterIsVisible = monster_is_visible_by_party;
 	
 		// le monstre a bouge ???

@@ -9610,6 +9610,7 @@ RESTARTABLE _TAG01f746(void)
     }
   } while (d.gameState == GAMESTATE_202);
   UI_BeginRecordOK(false);
+  opening_doors = true;
   StartSound(d.Pointer22968, 112, 1); // Start sound
   VBLDelay(_3_,20); // 20 vertical blanks
   STHideCursor(HC33);//TAG002fd2

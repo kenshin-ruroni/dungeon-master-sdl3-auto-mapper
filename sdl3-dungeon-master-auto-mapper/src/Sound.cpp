@@ -694,17 +694,20 @@ void StartSound(uint8_t *SoundBytes,
   if (NoSound) return;
   size = LE16(wordGear(SoundBytes));
   volume = 1;
-  if (highVolume==0) volume = 18;// attenuation
+  if (highVolume==0){
+   volume = 8;// attenuation adjusted by try and error
+  }
   volume *= volumeTable[gameVolume].divisor;
   uint32_t sizeOfWavSound = 0;
   Wave = SoundDecode(SoundBytes+2, size, volume, &sizeOfWavSound );
   sounder.Sound((char *)Wave, sizeOfWavSound, volumeTable[gameVolume].attenuation);
 }
 
+static bool filterActive = false;
 
 i32 SoundFilter(i32 soundNumber, i32 highVolume, const LOCATIONREL *soundLocr)
 {
-  static bool filterActive = false;
+
   // return value == 0 if sound was passed to a SoundFilter DSA
   // return vlaue == 1 if no Sound Filter exists.
   // return value == 2 if Sound Filter is already active.
