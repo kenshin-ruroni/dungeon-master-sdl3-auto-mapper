@@ -211,15 +211,15 @@ int number_of_boxes ;
 			sizeOfBox -=SIZE_OF_TILE;
 		}
 
-		if ( sizeOfBox <= 0)
+		if ( sizeOfBox < SIZE_OF_TILE)
 		{
-			sizeOfBox = 1;
+			sizeOfBox = SIZE_OF_TILE;
 		}
 
 		//SDL_FillSurfaceRect(grid, NULL, SDL_MapSurfaceRGBA(grid,0,0,0,255));
 		//render_texture();
 
-		numberOfTile = std::max(1,sizeOfBox/SIZE_OF_TILE);
+		numberOfTile = sizeOfBox/SIZE_OF_TILE;
 
 		number_of_tiles =  numberOfTile * numberOfTile;
 
