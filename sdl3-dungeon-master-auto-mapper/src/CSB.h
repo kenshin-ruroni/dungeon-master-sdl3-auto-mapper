@@ -9,7 +9,7 @@
 
 // TranslateLanguage!!! Is there a longer way to say it?
 #define _(str) TranslateLanguage(str)
-
+#include "CSBTypes.h"
 #include "Dispatch.h"
 #include "UI.h"
 //#ifdef _DEBUG
@@ -24,11 +24,9 @@ void traceFlash(const char *msg, i32 x=-1, i32 y=-1);
 
 #define MAX_LOADSTRING 100
 
-#ifdef _LINUX
+
 extern char szCSBVersion[MAX_LOADSTRING];
-#else
-extern char szCSBVersion[MAX_LOADSTRING];
-#endif
+
 
 #define FLOOR_BITMAP_SIZE 7840
 #define CEILING_BITMAP_SIZE 3248
@@ -3526,6 +3524,7 @@ i16  DeterminePoisonDamage(MONSTERTYPE mt, i16);
 void TAG00bd40(void);
 void ProcessMonstersOnLevel(void);//TAG00bd70
 void InitializeItem16(void);//TAG00be06
+bool BlockedTypeAHacked(i32  mapX, i32  mapY);
 bool BlockedTypeA(i32 mapX, i32 mapY);//TAG00be5a
 bool StoneOrClosedFalseWall(i32 mapX, i32 mapY);//TAG00bf00
 //   TAG00bf50

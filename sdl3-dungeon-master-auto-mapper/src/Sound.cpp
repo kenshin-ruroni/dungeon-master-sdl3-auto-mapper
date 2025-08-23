@@ -643,56 +643,12 @@ void SOUNDER::AddWave(char *wave, uint32_t size , int32_t attenuation)
 
 #else //if MAXWAVE==1
 // Linux uses SDL and therefore MAXWAVE must be 1 when using Linux.
-#ifdef _LINUX
+
 void SOUNDER::AddWave(char *wave, i32 attenuation,int size)
 {
   UI_PlaySound(wave, size);
 }
-#else // if not _LINUX
-void SOUNDER::AddWave(char *wave,int size, i32 attenuation)
-{
-  bool success;
-  if (m_wave[0] == NULL)
-  {
-#ifdef _MSVC_CE2002ARM
-    m_wave[0] = Resample(wave);
-#else
-    m_wave[0] = wave;
-#endif
-    //UI_free(wave);
-    m_attenuation[0] = attenuation;
-    UI_PlaySound(m_wave[0], SOUND_ASYNC|SOUND_MEMORY,m_attenuation[0]);
-    return;
-  };
-  if (m_toFree != NULL) UI_free(m_toFree);
-  m_toFree = m_wave[0];
-#ifdef _MSVC_CE2002ARM
-  m_wave[0] = Resample(wave);
-#else
-  m_wave[0] = wave;
-#endif
-  //UI_free(wave);
-  success = UI_PlaySound(m_wave[0], SOUND_ASYNC|SOUND_MEMORY,attenuation);
-  if (success)
-  {
-    //UI_free(m_wave[0]);
-    //m_wave[0] = wave;
-    //m_attenuation[0] = attenuation;
-  }
-  else
-  {
-    UI_StopSound();
-    //UI_free(m_wave[0]);
-    //m_wave[0] = NULL;
-    success = UI_PlaySound(m_wave[0], SOUND_ASYNC|SOUND_MEMORY,attenuation);
-    //if (success)
-    //{
-    //  m_wave[0] = wave;
-    //  m_attenuation[0] = attenuation;
-    //}
-  };
-}
-#endif // _LINUX
+
 #endif //MAXWAVE
 void SOUNDER::Sound(char *wave, i32 size,int attenuation)
 {

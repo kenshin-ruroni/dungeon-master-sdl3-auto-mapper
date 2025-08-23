@@ -13,8 +13,6 @@
 #include "CSB.h"
 #include "data.h"
 
-
-#ifdef _LINUX
 #pragma pack(1)
 
 #define DWORD unsigned int
@@ -55,7 +53,7 @@ struct BITMAPINFO
 };
 
 #pragma pack()
-#endif
+
 
 extern i32 WindowX;
 extern i32 WindowY;

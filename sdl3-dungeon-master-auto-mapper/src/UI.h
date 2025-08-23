@@ -39,6 +39,8 @@ enum MTYPE
   UIM_CHAR,        // Ascii character
   UIM_LEFT_BUTTON_DOWN,
   UIM_LEFT_BUTTON_UP,
+  UIM_WHEEL_BUTTON_UP,
+  UIM_WHEEL_BUTTON_DOWN,
   UIM_RIGHT_BUTTON_DOWN,
   UIM_RIGHT_BUTTON_UP,
   UIM_VBL,   //created by vertical blank handler
@@ -150,11 +152,9 @@ void UI_SetDIBitsToDevice(
 void UI_ScreenStartUpdates(void);
 void UI_ScreenEndUpdates(void);
 void UI_ScreenPresent(void);  // Called if any changes to screen
-#ifdef _LINUX
+
 bool UI_ProcessOption(char **argv,i32 &argc);
-#else
-bool UI_ProcessOption(char *key, char *value);
-#endif
+
 
 void UI_BeginRecordOK(bool ok);
 

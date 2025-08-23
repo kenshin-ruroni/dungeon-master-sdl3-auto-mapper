@@ -7,16 +7,14 @@ ui32 time(void *);
 #include <time.h>
 #endif
 
-#include "UI.h"
-
-//#include "Objects.h"
-#include "Dispatch.h"
-#include "CSB.h"
+#include "auto_mapper.h"
 #include "data.h"
 
 
 extern i32 VBLperTimer;
 extern bool overlayActive;
+extern auto_mapper autoMapper;
+
 
 i32 timerTypeModifier[3]; // set/clear/toggle
 
@@ -673,13 +671,10 @@ tag000730:
       i64 stime;
       static i64 prevstime;
       stime = UI_GetSystemTime();
-#ifdef _LINUX
+
       //fprintf(GETFILE(TraceFile),"%lld %lld Increment virtual game Time\n", stime, stime-prevstime);
       fprintf(GETFILE(TraceFile), "Increment virtual game Time to %08x\n", d.Time);
-#else
-      //fprintf(GETFILE(TraceFile),"%I64d %I64d Increment virtual game Time\n", stime, stime-prevstime);
-      fprintf(GETFILE(TraceFile), "Increment virtual game Timeto %08x\n", d.Time);
-#endif
+
       prevstime = stime;
     };
     if ((currentOverlay.m_p3 != 0) && (currentOverlay.m_p3 < d.Time)) overlayActive = false;
@@ -5785,6 +5780,11 @@ void SetPartyLevel(i32 level)
 
   LoadLevel(level);
   d.EndOfCELLFLAGS = d.LevelCellFlags[d.width-1] + d.height;//pdD0 = (CELLFLAG *)pD0;
+
+  //auto mapper
+  autoMapper.change_level(level,d.partyFacing, d.width,d.height);
+  //auto mapper
+
   d.NumWallDecoration = d.pCurLevelDesc->NumWallDecoration();
   D1W=d.pCurLevelDesc->numMonsterType();
   memmove(d.WallDecorationTOC, //For this level
@@ -6166,6 +6166,9 @@ void ProcessMonstersOnLevel(void)
           //D0W = ;
           if (objD5.dbType() == dbMONSTER) // Is it a monster?
           {
+            // auto mapper
+            autoMapper.initialize_monsters(GetRecordAddressDB1(objD5), mapX, mapY);
+            // auto mapper
             DeleteMonsterMovementTimers(mapX, mapY); // type 29-41
             AttachItem16ToMonster(objD5, mapX, mapY); //add to item16
             StartMonsterMovementTimers(mapX, mapY); //Set timers for monster
@@ -7996,13 +7999,10 @@ MOVEBUTN *MoveParty(const i32 button)
   {
     const char *pdir;
     //i64 stime = UI_GetSystemTime();
-#ifdef _LINUX
+
     //fprintf(GETFILE(TraceFile),"%lldd MoveParty ", stime);
     fprintf(GETFILE(TraceFile), "%d MoveParty ", d.Time);
-#else
-    //fprintf(GETFILE(TraceFile),"%I64d MoveParty ", stime);
-    fprintf(GETFILE(TraceFile), "%d MoveParty ", d.Time);
-#endif
+
     switch(direction)
     {
     case 3: pdir="forward"; break;
@@ -8015,6 +8015,12 @@ MOVEBUTN *MoveParty(const i32 button)
     fprintf(GETFILE(TraceFile),"%02x(%02x,%02x)\n",
             d.partyLevel,d.partyX,d.partyY);
   };
+
+// auto mapper
+      autoMapper.analyze_rooms_around(d.partyX, d.partyY);
+      autoMapper.update_party_position(d.partyX, d.partyY);
+// auto mapper
+
   if (direction == 0x1124) direction = 7;
   if (direction == 0x1125) direction = 8;
   direction -= 3;
@@ -8336,6 +8342,11 @@ MOVEBUTN *MoveParty(const i32 button)
         else
         {
           MoveObject(RN(RNnul),d.partyX,d.partyY,newX,newY,NULL, NULL);
+
+          //auto mapper
+          autoMapper.analyze_rooms_around(newX, newY);
+          autoMapper.update_party_position(newX, newY);
+          //auto mapper
         };
         time2move = 1;
         for (i=0, pCharacter=d.hero;

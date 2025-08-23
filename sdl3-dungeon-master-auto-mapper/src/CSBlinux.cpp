@@ -7,10 +7,10 @@
 #include <unistd.h>
 
 #include "CSBTypes.h"
+#include "auto_mapper.h"
 
 #include "Dispatch.h"
 #include "Objects.h"
-#include "CSB.h"
 #include "data.h"
 
 
@@ -49,15 +49,8 @@ SDL_Renderer *sdlRenderer = NULL;
 SDL_Rect desktop;
 int SDL_VIDEOEXPOSE = 0;
 
+auto_mapper autoMapper;
 
-
-#ifdef MAEMO_NOKIA_770
-# include "hildon-widgets/hildon-program.h"
-# include "hildon-widgets/hildon-window.h"
-
-  HildonProgram *program = NULL;
-  HildonWindow *hildonmainwindow = NULL;
-#endif//MAEMO_NOKIA_770
 
 void PostQuitMessage( int a ) {
     SDL_Event event;
@@ -953,10 +946,10 @@ MTRACE("SDL_WHEEL_EVENT");
     switch(y)
     {
       case 1:
-       // autoMapper.zoom(1);
+       autoMapper.zoom(10);
         break;
       case 0:
-       // autoMapper.zoom(-1);
+       autoMapper.zoom(-10);
         break;
     };
   };
@@ -1225,7 +1218,7 @@ int main(int argc, char* argv[])
 	sdlTexture = SDL_CreateTexture(sdlRenderer,SDL_PIXELFORMAT_RGB565,SDL_TEXTUREACCESS_STREAMING,320,200);
 
 
-  //autoMapper.initialize();
+  autoMapper.initialize();
 	
   SDL_ShowCursor();
 

@@ -4,15 +4,14 @@
 
 #include <stdio.h>
 
-//#include "Objects.h"
-#include "Dispatch.h"
-#include "CSB.h"
+#include "auto_mapper.h"
 #include "data.h"
 
 void ProcessPortraitTimer7(RN targetObj, const TIMER *pTimer);
 void info(char *, unsigned int);
 int MissileEncounterFilter(int type, LOCATIONREL locr, RN missile, RN projectile, i32 index);
 
+extern auto_mapper autoMapper;
 
 extern i32 deleteDuplicateTimers;
 extern i32 timerTypeModifier[3];
@@ -1280,6 +1279,11 @@ void ProcessTT_1(TIMER *pTimer)
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   y = pTimer->timerUByte7();
   x = pTimer->timerUByte6();
+
+  //auto mapper
+  autoMapper.initiliaze_position_of_party(d.partyX, d.partyY);
+  //auto mapper
+
   cfA2 = &d.LevelCellFlags[x][y];
   D4W = sw(*cfA2 & 7);
   if (D4W == 5) return;

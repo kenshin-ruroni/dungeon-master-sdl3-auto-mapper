@@ -877,11 +877,9 @@ void RECORDFILE::Open(void)
   // be put on disk.
   int tryAgain;
   if (m_fileNum >= 0) return; //Already open
-#ifdef _LINUX
+
   char folder[10] = "logs/";
-#else
-  char folder[10] = "logs\\";
-#endif
+
   for (tryAgain=0; tryAgain<2; tryAgain++)
   {
     for (i32 i=0; i<10000; i++)

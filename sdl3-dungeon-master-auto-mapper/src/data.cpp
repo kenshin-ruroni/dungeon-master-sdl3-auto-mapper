@@ -163,11 +163,8 @@ bool OpenTraceFile(void)
   i32 i=0, f;
   bool result = false;
   const char *folder;
-#ifdef _LINUX
+
   for (f=0, folder="traces/"; f<2; f++, folder="")
-#else
-  for (f=0, folder="\\traces\\"; f<2; f++, folder="")
-#endif
   {
     for (i=0; i<MaxTraceFiles; i++)
     {

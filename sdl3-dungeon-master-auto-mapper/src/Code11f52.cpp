@@ -1,13 +1,13 @@
 #include "stdafx.h"
 
-#include "UI.h"
+
 
 #include <stdio.h>
 
-//#include "Objects.h"
-#include "Dispatch.h"
-#include "CSB.h"
+#include "auto_mapper.h"
 #include "data.h"
+//#include "Objects.h"
+
 
 #ifdef _DEBUG
 extern i32 timertrace[1000];
@@ -18,6 +18,41 @@ void settrace(i32 n);
 #endif
 
 
+static const char *monsters_names[28]={
+  "Scorpion",   //0
+  "Slime Devil",   //1
+  "Giggler"     ,  //2
+  "FlyingEye"   ,//3
+  "PainRat"     ,//4
+  "Ruster"      ,//5
+  "Screamer" ,//6
+  "RockPile",//7
+  "Rive"     ,//8
+  "StoneGolem" ,//9
+  "Mummy",//10
+  "BlackFlame"         ,//11
+ " Skeleton"  ,//12
+  "Couatl" ,//13
+  "Vexirk" ,//14
+  "Worm" ,//15
+  "Trolin" ,//16
+  "Wasp" ,//17
+  "AnimatedArmour" ,//18
+  "Zytaz" ,//19
+  "WaterElemental" ,//20
+  "Oitu" ,//21
+  "Demon" ,//22
+  "LordChaos" ,//23
+  "Dragon" ,//24
+  "25" ,
+  "GreyLord" ,
+  "undefined" 
+};
+
+inline const char * MonsterType2Name(MONSTERTYPE monster_type){
+  return monsters_names[monster_type];
+}
+
 bool IsPlayFileOpen(void);
 const char *TranslateLanguage(const char *text);
 
@@ -25,6 +60,7 @@ extern bool version90Compatible;
 extern bool drawAsSize4Monsters;
 extern TIMER missileFilterTimer;
 
+extern auto_mapper autoMapper;
 
 void DescribeChampionBones(char *dest, const char *pName, const char *objName)
 {
@@ -1057,6 +1093,9 @@ void DeleteMonster(i32 mapX, i32 mapY, MMRECORD *pmmr)
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   objD7 = FindFirstMonster(mapX, mapY);
   if (objD7 == RNeof) return;
+
+  autoMapper.remove_monster_from_level(d.LoadedLevel, GetRecordAddressDB1(objD7), mapX,mapY);
+
   if (TimerTraceActive)
   fprintf(GETFILE(TraceFile),"Deleting monster %04x %02x(%02x,%02x)\n",
                   objD7.ConvertToInteger(),d.LoadedLevel,mapX,mapY);
@@ -2913,7 +2952,8 @@ i16 MoveObject(const RN        object,
     //};
     //D0W &= 1;
     item16Attached = (AttachedLevel_4 == d.partyLevel) && (oldX>=0);
-            // proper level && oldX>=0 means ITEM16 exists
+    // proper level && oldX>=0 means ITEM16 exists
+
     if (objD7 == RNnul)
     {
       d.partyX = sw(newX);
@@ -2938,7 +2978,8 @@ i16 MoveObject(const RN        object,
       {
         monsterPartyOther = MPO_other;
       };
-    };
+    }
+
     if (objectDBTypeD4 == dbMISSILE)
     {
       dbA2 = GetCommonAddress(objD7);
@@ -2946,7 +2987,8 @@ i16 MoveObject(const RN        object,
       //D0 = D0W*10;
       D0W = gameTimers.pTimer(D0W)->timerWord8();
       d.NewDir = BITS10_11(D0W);
-    };
+    }
+
     for (LOCAL_30=1000; LOCAL_30!=0; LOCAL_30--)
     { // Limited teleportation??? 1000 seems sufficient.
       if (pPretendTeleporter != NULL)
@@ -3221,7 +3263,24 @@ i16 MoveObject(const RN        object,
         };
         return (1);
       };
+      if (objectDBTypeD4 == dbMONSTER)
+      {
+      // auto mapper
+
+          //update monster position in map
+          // si meme niveau que niveau en cours et distance du monster est suffisamment reduite
+          if (d.LoadedLevel == d.partyLevel )
+          {
+            DB4 *monsterAsDB4 = ((DBCOMMON *)GetCommonAddress(objD7))->CastToDB4();
+            const char *monster_name = MonsterType2Name(monsterAsDB4->monsterType());
+            DB1 *monsterAsDB1 = ((DBCOMMON *)GetCommonAddress(objD7))->CastToDB1();
+            autoMapper.update_positions_of_nearby_monsters(monster_name,monsterAsDB1,newX,newY );
+          }
+        //auto mapper
+      }
     };
+
+      
     d.NewX = sw(newX);
     d.NewY = sw(newY);
     d.NewLevel = sw(curLevel); //level
@@ -4198,6 +4257,16 @@ void SetPartyFacing(i32 newDirection)
   //D2W = d.partyFacing;
   deltaFacing = newDirection - d.partyFacing;
   d.partyFacing = sw(newDirection);
+
+  // auto mapper
+  if ( d.LoadedLevel == d.partyLevel)
+  {
+	  autoMapper.set_facing( d.partyFacing );
+	  autoMapper.analyze_rooms_around(d.partyX,d.partyY);
+	  autoMapper.update_party_position(d.partyX,d.partyY);
+  }
+    // auto mapper
+
   if (deltaFacing != 0) // If direction changed.
   {
     deltaFacing += 4;

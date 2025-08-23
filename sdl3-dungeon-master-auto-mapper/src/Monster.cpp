@@ -4,13 +4,13 @@
 
 #include <stdio.h>
 
-//#include "Objects.h"
-#include "Dispatch.h"
-#include "CSB.h"
+#include "auto_mapper.h"
 #include "data.h"
 
 extern ui8         monsterMoveInhibit[4];
 extern bool neophyteSkills;
+
+extern auto_mapper autoMapper;
 
 const char *MonsterName(MONSTERTYPE mt);
 bool IsPlayFileOpen(void);
@@ -228,6 +228,11 @@ RN CreateMonster(i32  value,   //8
   else
   {
     QueueSound(soundTELEPORT, mapX, mapY, 1);
+
+    //auto mapper
+    autoMapper.initialize_monsters( GetRecordAddressDB1(objD7),  mapX, mapY);
+    //auto mapper
+    
     return (objD7);
   };
 }
@@ -285,6 +290,74 @@ void StealFromCharacter(DB4 *pDB4, i32 chIdx)
     //30OCT02SETWBITS0_3(pDB4->word14, 5);
     pDB4->fear(StateOfFear5);
   };
+}
+
+// une version hackee pour modifier le comportement
+// des portes avec une ouverture en forme de demi-disque placee en haut de la porte
+//
+bool BlockedTypeAHacked(i32  mapX, i32  mapY)
+{ // return true if blocked to passage.
+  // Certain monsters can go through certain doors.
+  // Door types 3 & 4 are considered blocked as are
+  // certain special doors on this level.
+//  dReg D0;
+  ui32  doorPosition;
+  CELLFLAG cfD7;
+  ROOMTYPE rtD6;
+  DB0 *pDoor;
+//;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  cfD7 = d.LevelCellFlags[mapX][mapY];
+  rtD6 = (ROOMTYPE)(cfD7>>5);
+  if (rtD6 == ROOMTYPE::roomDOOR)
+  {
+    pDoor = FirstObjectRecordAddressDB0(mapX, mapY); //Door
+    doorPosition = (i16)(cfD7 & 7);
+    if ( (doorPosition == 3) || (doorPosition == 4) ) //closed or almost closed
+    {
+    //SET(D0W, D5W==3); //Almost closed
+    //if (D0W == 0)
+    //{
+    //  SET(D0W, D5W==4); //Closed
+    //};
+    //if (D0W != 0)
+      //D0W = d.DoorTOC[pDoor->doorType()];//one of two types on level
+      //SET(D0W, (D0W & 0x100) == 0);// The high order byte
+
+    //	printf("BlockedTypeAHacked  door position = %i and doorType %i \n", doorPosition, d.DoorTOC[pDoor->doorType()]);
+
+
+//    if ( d.DoorTOC[pDoor->doorType()] == 42 )
+//    {
+//    	return false;
+//    }
+
+      if (neophyteSkills)
+      {
+        return d.DoorTOC[pDoor->doorType()] & 0x100 == 0; //Blocked if not special
+      }
+      else
+      {
+        return (d.DoorTOC[pDoor->doorType()] & 0x100) == 0; //Blocked if not special
+      };
+    };
+    //D0W = (int16_t)(D0W & 1);
+    return false;
+  };
+//    SET(D0W, rtD6==roomSTONE);
+//    if (D0W == 0)
+//    {
+//      SET(D0W, rtD6 == roomFALSEWALL);
+//      if (D0W != 0)
+//      {
+//        SET(D0W, (cfD7 & 4) == 0);
+//      };
+//    };
+//  };
+//  return D0W != 0;
+  if (rtD6 == ROOMTYPE::roomSTONE)     return true;
+  if (rtD6 != ROOMTYPE::roomFALSEWALL) return false;
+  if (cfD7 & 4) return false;
+  return true;
 }
 
 //*********************************************************

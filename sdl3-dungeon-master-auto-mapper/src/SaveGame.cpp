@@ -4,14 +4,10 @@
 
 #include <stdio.h>
 
-//#include "Objects.h"
-#include "Dispatch.h"
-#include "CSB.h"
+#include "auto_mapper.h"
 #include "data.h"
 
-#ifdef _MSVC_CE2002ARM
-extern bool hidingMenu;
-#endif
+extern auto_mapper autoMapper;
 
 extern unsigned char *encipheredDataFile;
 extern bool simpleEncipher;
@@ -335,7 +331,7 @@ i32 ReadExtendedFeatures(i32 handle)
     if (   (strcmp(efb.sentinel, " Extended Features ") == 0)
       && (efb.flags & EXTENDEDFEATURESBLOCK::SimpleEncryption))
     {
-      GETFILETABLE((ui16)handle)->Enciphered(true);
+      GETFILETABLE((i16)handle)->Enciphered(true);
       simpleEncipher = true;
     }
     else
@@ -2631,6 +2627,10 @@ i16 ReadDatabases(void)
     d.partyY = d.dungeonDatIndex->StartingPartyY();
     d.partyFacing = d.dungeonDatIndex->StartingPartyFacing();
     d.partyLevel = 0;
+
+    //auto mapper
+    autoMapper.initiliaze_position_of_party(d.partyX, d.partyY);
+    //auto mapper
   };
   numLevel = d.dungeonDatIndex->NumLevel();
   if (cellflagArraySize == 0)

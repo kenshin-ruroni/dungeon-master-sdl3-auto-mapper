@@ -4,11 +4,11 @@
 
 #include <stdio.h>
 
-//#include "Objects.h"
-#include "Dispatch.h"
-#include "CSB.h"
+#include "auto_mapper.h"
 #include "data.h"
 
+
+ extern auto_mapper autoMapper;
 
 extern i32 VBLperTimer;
 extern bool nostalgia_mode;

@@ -10,11 +10,7 @@
 #include <unistd.h>
 #include <string.h>
 
-
-#include "UI.h"
-//#include "Objects.h"
-#include "Dispatch.h"
-#include "CSB.h"
+#include "auto_mapper.h"
 #include "data.h"
 
 extern i32 updateScreenAreaEnterCount;
@@ -22,6 +18,8 @@ extern i32 updateScreenAreaLeaveCount;
 extern i32 dsaFilterEnterCount;
 extern i32 dsaFilterLeaveCount;
 
+
+extern auto_mapper autoMapper;
 
 void DSAInstrumentation_Dump();
 void ReadTranslationFile(void);
@@ -1213,6 +1211,18 @@ i32 CSBUI(CSB_UI_MESSAGE *msg)
         //OnMouseSwitchAction(0x0);
         OnMouseUnClick();
         break;
+
+    case UIM_WHEEL_BUTTON_DOWN:
+    {
+    	autoMapper.zoom( 10 );
+    }
+    	break;
+
+    case UIM_WHEEL_BUTTON_UP:
+    {
+
+    	autoMapper.zoom( -10 );
+    }
     case UIM_RIGHT_BUTTON_DOWN:
         OnMouseSwitchAction(0x1);
         if (virtualFullscreen)
@@ -1850,324 +1860,13 @@ void UI_ClearScreen(void)
 }
 #endif //024
 
-#ifdef _LINUX //025
+
 void UI_ClearScreen(void)
 {
   //nothing;
   UI_Invalidate();
 }
-#endif //025
 
-
-#ifdef _MSVC_INTEL //026
-void UI_ClearScreen(void)
-{
-  RedrawWindow(hWnd,NULL,NULL,RDW_ERASE|RDW_INVALIDATE);
-}
-
-void UI_ScreenStartUpdates(void) {};
-void UI_ScreenEndUpdates(void) {};
-void UI_ScreenPresent(void) {};
-
-void UI_SetDIBitsToDevice(i32 dstX,
-                          i32 dstY,
-                          i32 srcWidth,
-                          i32 srcHeight,
-                          i32 srcX,
-                          i32 srcY,
-                          i32 firstScan,
-                          i32 numScan,
-                          char *bitmap,
-                          void *bInfo,//struct tagBITMAPINFO *bInfo,
-                          i32 flags)
-{
-  HDC newhdc;
-
-
-#ifdef _MOVIE //027
-  {
-    static int count = 0;
-    static int FH;
-    static ui16 buffer[200*320];
-    struct
-    {
-      ui64 curTime;
-      i32 dstX, dstY;
-      i32 srcWidth, srcHeight;
-    } hdr;
-    hdr.curTime = UI_GetSystemTime();
-    hdr.dstX = dstX;
-    hdr.dstY = dstY;
-    hdr.srcWidth = srcWidth;
-    hdr.srcHeight = srcHeight;
-    if (dstX == -1)
-    {
-      if (count != 0)
-      {
-        _write(FH, &hdr,sizeof(hdr));
-      };
-      return;
-    };
-    if (count == 0)
-    {
-      FH = _open("movie.bin",_O_WRONLY|_O_CREAT|_O_TRUNC|O_SEQUENTIAL|_O_BINARY,_S_IWRITE);
-    };
-    count++;
-    {
-      if ((srcWidth <= 320)&&(srcHeight<=200))
-      {
-        int i,j;
-        for (i=0; i<srcWidth; i++)
-        {
-          for (j=0; j<srcHeight; j++)
-          {
-            buffer[j*srcWidth + i] = ((ui16 *)bitmap)[j*((tagBITMAPINFOHEADER *)bInfo)->biWidth + i];
-          };
-        };
-      };
-    };
-    _write(FH, &hdr,sizeof(hdr));
-    _write(FH, buffer,2*srcWidth*srcHeight);
-  };
-#endif //027
-  newhdc = 0;
-  if (hdc == 0)
-  {
-    newhdc = GetDC(hWnd);
-    hdc = newhdc;
-  };
-
-
-  SetDIBitsToDevice(hdc,
-                    dstX,
-                    dstY,
-                    srcWidth,
-                    srcHeight,
-                    srcX,
-                    srcY,
-                    firstScan,
-                    numScan,
-                    bitmap,
-                    (tagBITMAPINFO *)bInfo,
-                   flags);
-  if (newhdc != 0)
-  {
-    ReleaseDC(hWnd,newhdc);
-    hdc = 0;
-  };
-}
-#endif //026
-
-#ifndef TARGET_OS_MAC //028
-#ifndef _LINUX //029
-// The linux version of this function is defined in CSBlinux.cpp
-void UI_GetCursorPos(i32 *x, i32 *y)
-{
-  POINT point;
-  GetCursorPos(&point);
-  ScreenToClient(hWnd,&point);
-  if (virtualFullscreen)
-  {
-    i32 X=point.x, Y=point.y;
-    RECT rect;
-    i32 distance2 = 1<<30;
-    i32 d2, dx, dy;
-    i32 i;
-    POINT test, closestPoint = {0,0};
-    for (i=0; (distance2 != 0) && GetVideoRectangle(i, &rect); i++)
-    {
-      if (X < rect.left) test.x = rect.left;
-      else if (X >= rect.right) test.x = rect.right-1;
-      else test.x = X;
-      if (Y < rect.top) test.y = rect.top;
-      else if (Y >= rect.bottom) test.y = rect.bottom-1;
-      else test.y = Y;
-      dx = test.x - X;
-      dy = test.y - Y;
-      d2 = dx*dx + dy*dy;
-      if (d2 < distance2)
-      {
-        distance2 = d2;
-        closestPoint.x = test.x;
-        closestPoint.y = test.y;
-      };
-    };
-    //if (set) SetCursorPos(point.x, point.y);
-    TranslateFullscreen(closestPoint.x,closestPoint.y,X,Y);
-    point.x = X;
-    point.y = Y;
-  }
-  else
-  {
-    point.x = (point.x + screenSize/2)/screenSize;
-    point.y = (point.y + screenSize/2)/screenSize;
-  };
-  //if (point.x < 0) point.x = 0;
-  //if (point.y < 0) point.y = 0;
-  //if (point.x > 318) point.x = 318;
-  //if (point.y > 198) point.y = 198;
-  *x = point.x;
-  *y = point.y;
-}
-#endif //029
-#endif //028
-
-#ifndef _LINUX //030
-
-bool UI_ProcessOption(char *key, char *value)
-{
-  if (strcmp(key,"DIRECTORY")==0)
-  {
-    if (folderName != NULL) UI_free(folderName);
-    //folderName = (char *)UI_malloc(strlen(value)+2, MALLOC013);
-    folderName = (char *)UI_malloc((i32)strlen(value)+2, MALLOC013);
-    if (folderName != NULL)
-    {
-      strcpy(folderName,value);
-      if (folderName[strlen(folderName)-1] != '\\')
-      {
-        folderName[strlen(folderName)+1] = 0;
-        folderName[strlen(folderName)] = '\\';
-      };
-      if (folderParentName != NULL) UI_free(folderParentName);
-      folderParentName = parentFolder(folderName, folderName+strlen(folderName));
-    };
-    return true;
-  };
-  if (strcmp(key,"REPEAT") == 0)
-  {
-    RepeatGame = true;
-    NoRecordCommandOption = true;
-    RecordCommandOption = false;
-    return true;
-  };
-  if (strcmp(key,"HEIGHT") == 0)
-  {
-    sscanf(value,"%d", &WindowHeight);
-    return true;
-  };
-  if (strcmp(key,"QUICK") == 0)
-  {
-    sscanf(value,"%d", &NoSpeedLimit);
-    return true;
-  };
-  if (strcmp(key,"VBLMULTIPLIER") == 0)
-  {
-    sscanf(value,"%d", &VBLMultiplier);
-    return true;
-  };
-  if (strcmp(key,"DUNGEON") == 0)
-  {
-    strcpy(dungeonName,value);
-    return true;
-  };
-  if (strcmp(key,"WIDTH") == 0)
-  {
-    sscanf(value,"%d", &WindowWidth);
-    return true;
-  };
-  if (strcmp(key,"X") == 0)
-  {
-    sscanf(value,"%d", &WindowX);
-    return true;
-  };
-  if (strcmp(key,"Y") == 0)
-  {
-    sscanf(value,"%d", &WindowY);
-    return true;
-  };
-  if (strcmp(key,"SIZE") == 0)
-  {
-    strupr(value);
-    if (strcmp(value,"FULL") == 0)
-    {
-      fullscreenRequested = true;
-    };
-
-    if (strcmp(value,"FSX6") == 0)
-    {
-      screenSize = 6;
-      return true;
-    };
-    if (strcmp(value,"HUMONGOUS") == 0)
-    {
-      screenSize = 6;
-      return true;
-    };
-    if (strcmp(value,"FSX5") == 0)
-    {
-      screenSize = 5;
-      return true;
-    };
-    if (strcmp(value,"EXTREMELYLARGE") == 0)
-    {
-      screenSize = 5;
-      return true;
-    };
-    if (strcmp(value,"EXTRALARGE") == 0)
-    {
-      screenSize = 4;
-      return true;
-    };
-    if (strcmp(value,"VERYLARGE") == 0)
-    {
-      screenSize = 3;
-      return true;
-    };
-    if (strcmp(value,"LARGE") == 0)
-    {
-      screenSize = 2;
-      return true;
-    };
-    if (strcmp(value,"SMALL") == 0)
-    {
-      screenSize = 1;
-      return true;
-    };
-    return false;
-  };
-  if (strcmp(key,"SPEED") == 0)
-  {
-    CSB_UI_MESSAGE csbMessage;
-    strupr(value);
-    csbMessage.type = UIM_SETOPTION;
-    csbMessage.p1 = OPT_CLOCK;
-    csbMessage.p2 = -1;
-    if (strcmp(value,"GLACIAL") == 0) csbMessage.p2 = SPEED_GLACIAL;
-    if (strcmp(value,"MOLASSES") == 0) csbMessage.p2 = SPEED_MOLASSES;
-    if (strcmp(value,"VERYSLOW") == 0) csbMessage.p2 = SPEED_VERYSLOW;
-    if (strcmp(value,"SLOW") == 0) csbMessage.p2 = SPEED_SLOW;
-    if (strcmp(value,"NORMAL") == 0) csbMessage.p2 = SPEED_NORMAL;
-    if (strcmp(value,"FAST") == 0) csbMessage.p2 = SPEED_FAST;
-    if (strcmp(value,"QUICK") == 0) csbMessage.p2 = SPEED_QUICK;
-    if (strcmp(value,"FTL") == 0) csbMessage.p2 = SPEED_FTL;
-    if (csbMessage.p2 != -1) CSBUI(&csbMessage);
-  };
-  if (strcmp(key,"PLAY") == 0)
-  {
-    strcpy(PlayfileName,value);
-    extraTicks = false;
-    PlaybackCommandOption = true;
-    return true;
-  };
-  if (strcmp(key,"RECORD") == 0)
-  {
-    RecordCommandOption = true;
-    NoRecordCommandOption = false;
-  };
-  if (strcmp(key,"NORECORD") == 0)
-  {
-    NoRecordCommandOption = true;
-    RecordCommandOption = false;
-  };
-  if (strcmp(key,"DIRECTX") == 0)
-  {
-    usingDirectX = true;
-  };
-  return false;
-}
-
-#endif //030
 
 void UI_BeginRecordOK(bool ok)
 {

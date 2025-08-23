@@ -1,6 +1,7 @@
 
 #pragma pack(1)
 
+//#include "CSBTypes.h"
 
 #define maxFilesOpen 8
 #define NumExpandedGraphics 1275
@@ -1541,6 +1542,7 @@ class TIMER_SEARCH;
 
 class GameTimers
 {
+  public:
   friend class TIMER_SEARCH;
   friend RESTARTABLE _ReadEntireGame(void);
 //  friend void AdjustTimerPosition(i32 timerPosition);
@@ -1560,7 +1562,6 @@ class GameTimers
   bool   m_searchActive;
   //i16    m_FirstAvailTimerLoading;
   //i16    m_numTimersLoading;
-public:
   GameTimers(void);
   ~GameTimers(void);
   void InitializeTimers(void);
@@ -1570,7 +1571,6 @@ public:
   void ConvertToExtendedTimers(void);
   void GetNextTimerEntry(TIMER *P1, ui32 *index);
   bool CheckForTimerEvent(void);
-private:
   inline i32 NumTimer(void){return m_numTimer;};
   inline void NumTimer(i32 numTimer){m_numTimer=(i16)numTimer;};
   //void DecrementNumTimer();

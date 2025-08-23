@@ -305,7 +305,7 @@ i32 READ(i32 file, i32 num, ui8 *buf)
   if (GETFILE((ui16)file) == NULL) return -1;
   position = LSEEK(0, file, SEEK_CUR);
   result = (ui32)fread(buf,1,num,GETFILE((ui16)file));
-  if (GETFILETABLE((ui16)file)->Enciphered())
+  if (GETFILETABLE((i16)file)->Enciphered())
   {
     RC4_encipher((unsigned char *)buf,result,position);
   };
@@ -629,9 +629,8 @@ void checkVBL(void)
       Instrumentation(icntVBL);
       vblInterrupt();
       UI_Invalidate();
-#ifdef _LINUX
-	LIN_Invalidate();
-#endif
+	  LIN_Invalidate();
+
     };
   };
 }
