@@ -21,7 +21,7 @@
 
 #define PADDING_X 10
 #define PADDING_Y 10
-#define SIZE_OF_BOX 60
+#define SIZE_OF_BOX 20
 #define SIZE_OF_TILE 10 // une cellule est découpée en petits carres de cote tile_size_box
 #define LIGHT_RADIUS 5
 
@@ -77,9 +77,26 @@ struct Level
 static int32_t cosinus[4] = {-1,0,1,0};
 static int32_t   sinus[4] = {0,1,0,-1};
 
-
-
+	
 struct auto_mapper {
+
+// le level en cours
+	int32_t _MaxlevelNumber;
+	Room *rooms;
+
+	Level *_levels; // le stock de levels deja visites
+
+	uint32_t width = 600, height = 600;
+	uint16_t _numberOfBoxX;
+	uint16_t _numberOfBoxY;
+	int16_t sizeOfBox;
+	int16_t numberOfTile;
+
+	int16_t _Radius, _Radius2;
+
+	TTF_Font *_font;
+
+int number_of_boxes ;
 
 
 	auto_mapper()
@@ -93,28 +110,19 @@ struct auto_mapper {
 
 	numberOfTile = SIZE_OF_BOX/SIZE_OF_TILE;
 
+	number_of_tiles =  numberOfTile * numberOfTile;
+
 	_numberOfBoxX = 20;
 	_numberOfBoxY = 20;
+
+	number_of_boxes = _numberOfBoxX * _numberOfBoxY;
 
 	_partyX = _numberOfBoxX/2;
 	_partyY = _numberOfBoxY/2;
 
 	_Radius2 = LIGHT_RADIUS * LIGHT_RADIUS;
 
-	if (!TTF_Init())
-	{
-		SDL_Log("error initializing SDL TTF %s \n",SDL_GetError());
-		// Handle error...
-	}
-
-
-	if(	(_font = TTF_OpenFont("BruceForeverRegular.ttf", 12)) == NULL){
-		SDL_Log(" auto mmapper font not found.");exit(-1);
-	}
-
-	_width = 1040 - 650 ;
-	_height = 400;
-
+	
 	facingTo = 2; // on regarde vers le nord par defaut
 	previousFacing = 2;
 
@@ -127,14 +135,12 @@ struct auto_mapper {
 	uint32_t iy = 0;
 
 
-	//for (uint16_t i = 0; i < _numberOfBoxX * _numberOfBoxY ; i ++)
+	//for (uint16_t i = 0; i < number_of_boxes ; i ++)
 	//{
 	//	iy = i/_numberOfBoxX;
 	//	ix = i - iy * _numberOfBoxX;
 	//	draw_room(i,ix,iy);
 	//}
-
-
 	initializes = false;
 
 	}
@@ -142,13 +148,20 @@ struct auto_mapper {
 	SDL_Window *window;
 	SDL_Texture *texture;
 	TTF_TextEngine *ttf_text_engine;
-	inline void initialize(){
-
-	SDL_CreateWindowAndRenderer("auto mapper",400,400,SDL_WINDOW_RESIZABLE|SDL_WINDOW_HIGH_PIXEL_DENSITY|SDL_WINDOW_MOUSE_CAPTURE,&window,&renderer);
-	grid = SDL_CreateSurface(400,400,SDL_PIXELFORMAT_BGRA32);
-	texture = SDL_CreateTextureFromSurface(renderer,grid);
-	ttf_text_engine = 	TTF_CreateRendererTextEngine(renderer);
-
+	inline void initialize()
+	{
+		if (!TTF_Init())
+			{
+				SDL_Log("error initializing SDL TTF %s \n",SDL_GetError());
+				// Handle error...
+			}
+			if(	(_font = TTF_OpenFont("BruceForeverRegular.ttf", 12)) == NULL){
+				SDL_Log(" auto mmapper font not found.");exit(-1);
+			}
+		SDL_CreateWindowAndRenderer("auto mapper",width,height,SDL_WINDOW_RESIZABLE|SDL_WINDOW_HIGH_PIXEL_DENSITY|SDL_WINDOW_MOUSE_CAPTURE,&window,&renderer);
+		grid = SDL_CreateSurface(width,height,SDL_PIXELFORMAT_BGRA32);
+		texture = SDL_CreateTextureFromSurface(renderer,grid);
+		ttf_text_engine = 	TTF_CreateRendererTextEngine(renderer);
 	render();
 
 	}
@@ -163,32 +176,32 @@ struct auto_mapper {
 		SDL_DestroyTexture(texture);
 	}
 
-	// le level en cours
-	int32_t _MaxlevelNumber;
-	Room *rooms;
 
-	Level *_levels; // le stock de levels deja visites
-
-	uint32_t _width, _height;
-	uint16_t _numberOfBoxX;
-	uint16_t _numberOfBoxY;
-	int16_t sizeOfBox;
-	int16_t numberOfTile;
-
-	int16_t _Radius, _Radius2;
-
-	TTF_Font *_font;
 
 
 	void inline resize(uint32_t newnumberOfint32_tX, uint32_t newnumberOfBoxY, uint32_t newSizeOfBox);
 	void inline scroll( uint32_t mouseX, uint32_t mouseY);
 
+
+	int16_t ix,iy;
+
+	inline void draw_all_rooms(){
+		for (uint16_t i = 0; i < number_of_boxes ; i ++)
+		{
+			iy = i/_numberOfBoxX;
+			ix = i - iy * _numberOfBoxX;
+			draw_room(i,ix,iy);
+		}
+	}
+
+	int number_of_tiles =  numberOfTile * numberOfTile;
 	void inline zoom(float zoomFactor)
 	{
 		SDL_Window * w = SDL_GetMouseFocus();
 		if ( w != window){
 			return;
 		}
+		memset(grid->pixels,0,grid->pitch*grid->h);
 		if ( zoomFactor > 0.)
 		{
 			sizeOfBox +=SIZE_OF_TILE;
@@ -203,19 +216,14 @@ struct auto_mapper {
 			sizeOfBox = 1;
 		}
 
-		int result = SDL_FillSurfaceRect(grid, NULL, SDL_MapSurfaceRGBA(grid,0,0,0,0));
-		uint32_t ix = 0, iy = 32;
-
-
+		//SDL_FillSurfaceRect(grid, NULL, SDL_MapSurfaceRGBA(grid,0,0,0,255));
+		//render_texture();
 
 		numberOfTile = std::max(1,sizeOfBox/SIZE_OF_TILE);
 
-		for (uint16_t i = 0; i < _numberOfBoxX * _numberOfBoxY ; i ++)
-		{
-			iy = i/_numberOfBoxX;
-			ix = i - iy * _numberOfBoxX;
-			draw_room(i,ix,iy);
-		}
+		number_of_tiles =  numberOfTile * numberOfTile;
+
+		draw_all_rooms();
 		pan_to_party_position();
 	}
 
@@ -226,20 +234,7 @@ struct auto_mapper {
 			return;
 
 		compute_center_of_screen();
-
-		// on efface la surface grid
-		//
-		int result = SDL_FillSurfaceRect(grid, NULL, SDL_MapSurfaceRGBA(grid,0,0,0,0));
-		//
-
-		int16_t ix,iy;
-
-		for (int16_t i = 0; i < _numberOfBoxX * _numberOfBoxY ; i ++)
-		{
-			iy = i/_numberOfBoxX;
-			ix = i - iy * _numberOfBoxX;
-			draw_room(i, ix,iy);
-		}
+		draw_all_rooms();
 		render();
 		previousFacing = facingTo;
 	} 
@@ -614,9 +609,13 @@ struct auto_mapper {
 	{
 		previousFacing = facingTo;
 		facingTo = facing;
-		//pan_to_party_osition();
-
-
+		// on efface la surface grid
+		//
+		SDL_SetRenderDrawColor(renderer,0,0,0,0);
+		memset(grid->pixels,0,grid->pitch*grid->h);
+		SDL_RenderClear(renderer);
+		render_texture();
+		pan_to_party_position();
 	}
 
 	int16_t _partyX, _partyY;
@@ -650,7 +649,6 @@ struct auto_mapper {
 		SDL_SetRenderDrawColor(renderer,(uint8_t)(float(r)*falpha),(uint8_t)(float(g)*falpha),(uint8_t)(float(b)*falpha),(uint8_t)(float(a)*falpha));
 		SDL_RenderFillRect(renderer,&rect);
 
-		printf("float alpha = %f \n",falpha);
 		//SDL_SetRenderDrawColor(renderer,(uint8_t)(float(a)*falpha),(uint8_t)(float(a)*falpha),(uint8_t)(float(a)*falpha),(uint8_t)(float(a)*falpha));
 		//SDL_RenderRect(renderer,&rect);
 
@@ -685,8 +683,8 @@ struct auto_mapper {
 
 
 			// on centre sur la position courante dans le dongeon
-		static	int16_t x0 = 0.5f * _width ;
-		static 	int16_t y0 = 0.5f * _height ;
+		static	int16_t x0 = width/2 ;
+		static 	int16_t y0 = height/2 ;
 
 			// coordonnees des points de la salle par rapport a la salle courante
 			//
@@ -735,7 +733,7 @@ struct auto_mapper {
 			if ( room->content == RoomContent::empty && !room->containsAmonster && !room->MonsterIsVisible )
 			{
 				draw_a_box(x0+XP3,y0+YP3,x0+XP1,y0+YP1,0,0,0,255);
-				return;
+				
 			}
 
 
@@ -791,7 +789,7 @@ struct auto_mapper {
 			int16_t xp1,yp1,xp2,yp2;
 			int16_t lpx = std::min(XP3,XP1);
 			int16_t lpy = std::min(YP3,YP1);
-			for (uint16_t l = 0; l < numberOfTile * numberOfTile;l++)
+			for (uint16_t l = 0; l < number_of_tiles;l++)
 			{
 				k = l/numberOfTile;
 				j = l - k * numberOfTile;
@@ -803,8 +801,7 @@ struct auto_mapper {
 				//alpha = 255/( 1 + exp(  0.1 * ( ((xp1-_xc)*(xp1-_xc) + (yp1-_yc)*(yp1-_yc)  )/_Radius2 ))  );
 				// source quadratique
 				//alpha = 255/( 1 + (  0.25 * ( ((xp1-_xc)*(xp1-_xc) + (yp1-_yc)*(yp1-_yc)  )/_Radius2 ))  );
-				alpha = 255/( 1 + ( 0.0002f *  ( ((xp1-_xc)*(xp1-_xc) + (yp1-_yc)*(yp1-_yc)  )/_Radius2 ))  );
-				printf("alpha   = %i \n",(int)a);
+				alpha = 255/( 1 + ( 0.001f/(1.0f+number_of_tiles) *  ( ((xp1-_xc)*(xp1-_xc) + (yp1-_yc)*(yp1-_yc)  )/_Radius2 ))  );
 				draw_a_box(xp1,yp1,xp2,yp2,rr,gg,bb,alpha);
 				//DrawOnScreen();
 			}
@@ -933,8 +930,8 @@ struct auto_mapper {
 	}
 	void inline compute_center_of_screen()
 	{
-		int16_t x0 = 0.5f * _width ;
-		int16_t y0 = 0.5f * _height ;
+		int16_t x0 = 0.5f * width ;
+		int16_t y0 = 0.5f * height ;
 
 		// coordonnees des points de la salle par rapport a la salle courante
 		//
@@ -996,6 +993,8 @@ struct auto_mapper {
 
 	_numberOfBoxX = nX;
 	_numberOfBoxY = nY;
+
+	number_of_boxes = _numberOfBoxX * _numberOfBoxY;
 	//sizeOfBox = SIZE_OF_BOX;
 
 	facingTo = facing;
@@ -1533,17 +1532,20 @@ struct auto_mapper {
 		sprintf((char *)text, " location Room At (%u,%u)",_partyX,_partyY );
 		ttf_text = TTF_CreateText(ttf_text_engine,_font,text,strlen(text));
 
-
-		SDL_SetRenderDrawColor(renderer,100,100,100,255);
-		SDL_RenderLine(renderer, 1, 1,_width - 1, 1 );
-		SDL_RenderLine(renderer, 1, 1 , 1, _height - 1 );
-		SDL_RenderLine(renderer,  1,_height - 1 ,  _height - 1 ,_height -1 );
-		SDL_RenderLine(renderer, _width -1,  _height- 1, _width -1, 1 );
+		SDL_RenderLine(renderer, 1, 1,width - 1, 1 );
+		SDL_RenderLine(renderer, 1, 1 , 1, height - 1 );
+		SDL_RenderLine(renderer,  1,height - 1 ,  height - 1 ,height -1 );
+		SDL_RenderLine(renderer, width -1,  height- 1, width -1, 1 );
 		TTF_DrawRendererText(ttf_text,10,10);
+		render_texture();
+		TTF_DestroyText(ttf_text);
+	}
+
+	void inline render_texture(){
 		SDL_UpdateTexture(texture,NULL,grid->pixels,grid->pitch);
 		SDL_RenderPresent(renderer);
+		SDL_SetRenderDrawColor(renderer,0,0,0,0);
 		SDL_RenderClear(renderer);
-		TTF_DestroyText(ttf_text);
 	}
 
 };
