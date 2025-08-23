@@ -21,8 +21,8 @@
 
 #define PADDING_X 10
 #define PADDING_Y 10
-#define SIZE_OF_BOX 48
-#define SIZE_OF_TILE 5 // une cellule est découpée en petits carres de cote tile_size_box
+#define SIZE_OF_BOX 60
+#define SIZE_OF_TILE 10 // une cellule est découpée en petits carres de cote tile_size_box
 #define LIGHT_RADIUS 5
 
 #define MAX_MONSTER_Y 5
@@ -400,6 +400,8 @@ struct auto_mapper {
 
 	Monster *m = NULL;
 	Level * level = NULL;
+	bool monster_is_not_visible_by_party ;
+	bool monster_is_in_vicinity ;
 	void inline update_positions_of_nearby_monsters(const char *monster_name, DB1 *monster, int16_t x,int16_t y)
 	{
 		m = NULL;
@@ -452,10 +454,9 @@ struct auto_mapper {
 			rooms[x + _numberOfBoxX * y].containsAmonster = true;
 			oldX = oldY = 0;
 		}
-		bool monster_is_visible_by_party = TestDirectPathOpen(x,y,_partyX,_partyY,StoneOrClosedFalseWall) == 0 || TestDirectPathOpen(x,y,_partyX,_partyY,BlockedTypeAHacked) == 0;
 		if ( found)
 		{
-					
+			
 			// WARNING le monstre peut avoir bouge entre temps
 			// il faut en tenir compte
 
@@ -479,8 +480,9 @@ struct auto_mapper {
 					}
 					// on indique que la salle x,y contient le monstre
 					rooms[x + _numberOfBoxX * y].containsAmonster = true;
-					bool monster_is_in_vicinity = std::abs(m->x - _partyX) <= MAX_MONSTER_X && std::abs(m->y - _partyY) <= MAX_MONSTER_Y; 
-					rooms[x + _numberOfBoxX * y].MonsterIsVisible = monster_is_visible_by_party && monster_is_in_vicinity;
+					monster_is_in_vicinity = std::abs(m->x - _partyX) <= MAX_MONSTER_X && std::abs(m->y - _partyY) <= MAX_MONSTER_Y; 
+					monster_is_not_visible_by_party = TestDirectPathOpen(m->x,m->y,_partyX,_partyY,StoneOrClosedFalseWall) == 0 || TestDirectPathOpen(m->x,m->y,_partyX,_partyY,BlockedTypeAHacked) == 0;		
+					rooms[x + _numberOfBoxX * y].MonsterIsVisible = !monster_is_not_visible_by_party && monster_is_in_vicinity;
 					draw_room(x + _numberOfBoxX * y,x,y);
 	
 	//		// le monstre ne peut etre visible
@@ -500,7 +502,7 @@ struct auto_mapper {
 
 
 
-		rooms[x + _numberOfBoxX * y].MonsterIsVisible = monster_is_visible_by_party;
+		rooms[x + _numberOfBoxX * y].MonsterIsVisible = monster_is_not_visible_by_party;
 	
 		// le monstre a bouge ???
 		if (  m->x != x || m->y != y )
@@ -647,9 +649,12 @@ struct auto_mapper {
 		SDL_SetRenderDrawColor(renderer,r,g,b,a);
 		SDL_RenderFillRect(renderer,&rect);
 
+		SDL_SetRenderDrawColor(renderer,250,50,50,50);
+		SDL_RenderRect(renderer,&rect);
+
 	}
 
-	 SDL_Vertex vertices[3];
+	 SDL_Vertex vertices[43];
 	void inline draw_a_filled_triangle(int16_t x1, int16_t y1,int x2, int16_t y2,int x3, int16_t y3,uint8_t r,uint8_t g, uint8_t b,uint8_t a)
 	{
 		vertices[0] = {.position={(float)x1,(float)y1},.color = {(float)r/255.f,(float)g/255.f,(float)b/255.f,(float)a/255.f}};
@@ -749,10 +754,10 @@ struct auto_mapper {
 			g = 190;
 
 
-		bool test = room->content == RoomContent::visited;
-			test |= room->content == RoomContent::stone;
-			test |= room->content == RoomContent::visible;
-			test |= room->containsAmonster == true;
+		bool test = room->content == RoomContent::visited ||
+									 room->content == RoomContent::stone ||
+									 room->content == RoomContent::visible ||
+									 room->containsAmonster ;
 
 		if ( test )
 		{
@@ -1014,11 +1019,11 @@ struct auto_mapper {
 		_MaxlevelNumber = newLevel;
 
 		// on sauvegarde le sizeofBox du level en cours
-		_levels[_currentLevel].sizeOfBox = sizeOfBox;
+		_levels[newLevel].sizeOfBox = sizeOfBox;
 
 		// on reset le size of box
-		sizeOfBox = SIZE_OF_BOX;
-		numberOfTile = sizeOfBox/SIZE_OF_TILE;
+		//sizeOfBox = SIZE_OF_BOX;
+		//numberOfTile = sizeOfBox/SIZE_OF_TILE;
 	}
 	else
 	{
