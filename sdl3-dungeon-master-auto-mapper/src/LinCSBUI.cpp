@@ -482,6 +482,7 @@ static bool LIN_PlaySound(i8* audio, const ui32 size, int volume)
 	else{
 		sound= MIX_LoadRawAudio(sdl3_mixer,(void *) audio, size,&audio_spec);
 	}
+  MIX_SetMasterGain(sdl3_mixer,volume);
 	  return MIX_PlayAudio(sdl3_mixer,sound);
 };
 

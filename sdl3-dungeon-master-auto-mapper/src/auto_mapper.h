@@ -497,20 +497,9 @@ struct auto_mapper {
 		}
 
 
-
-	if ( TestDirectPathOpen(x,y,_partyX,_partyY,StoneOrClosedFalseWall) == 0 || TestDirectPathOpen(x,y,_partyX,_partyY,BlockedTypeAHacked) == 0 )
-	{
-//		if ( !rooms[x + _numberOfBoxX * y].containsAmonster )
-//		{
-//			return;
-//		}
-		// on ne voit plus le monstre on l'efface
-		rooms[x + _numberOfBoxX * y].MonsterIsVisible = true;
-//		draw_room(x + _numberOfBoxX * y,x,y);
-//		DrawOnScreen();
-//		return;
-	}
-
+		bool monster_is_visible_by_party = TestDirectPathOpen(x,y,_partyX,_partyY,StoneOrClosedFalseWall) == 0 || TestDirectPathOpen(x,y,_partyX,_partyY,BlockedTypeAHacked) == 0;
+		rooms[x + _numberOfBoxX * y].MonsterIsVisible = monster_is_visible_by_party;
+	
 		// le monstre a bouge ???
 		if (  m->x != x || m->y != y )
 		{
@@ -539,10 +528,9 @@ struct auto_mapper {
 //					DrawOnScreen();
 //				}
 
-
 		// on indique que la salle x,y contient le monstre
-		rooms[x + _numberOfBoxX * y].containsAmonster = true;
-		rooms[x + _numberOfBoxX * y].MonsterIsVisible = true;
+		rooms[m->x + _numberOfBoxX * m->y].containsAmonster = true;
+
 		draw_room(x + _numberOfBoxX * y,x,y);
 		pan_to_party_position();
 
@@ -551,7 +539,7 @@ struct auto_mapper {
 
 
 
-	void inline look_around_for_a_nearby_monster(int16_t x, int16_t y)
+	void inline look_around_for_nearby_monsters(int16_t x, int16_t y)
 	{
 		RN obj ;
 
@@ -1060,7 +1048,7 @@ struct auto_mapper {
 			rooms[_partyX + _numberOfBoxX * _partyY].content = RoomContent::visited;
 		}
 
-		look_around_for_a_nearby_monster(x,y);
+		look_around_for_nearby_monsters(x,y);
 		update_monsters(x,y);
 
 		_partyX = x;
