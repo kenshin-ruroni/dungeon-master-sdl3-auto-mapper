@@ -642,15 +642,17 @@ struct auto_mapper {
 	SDL_FRect rect = {};
 	void inline draw_a_box(int16_t x1, int16_t y1,int x2, int16_t y2,uint8_t r,uint8_t g, uint8_t b,uint8_t a)
 	{
+		float falpha = float(a)/255.;
 		rect.x = std::min((int)x1,(int)x2);
 		rect.y = std::min((int)y1,(int)y2);
 		rect.w = 	std::max((int)x1,(int)x2) - std::min((int)x1,(int)x2);
 		rect.h = 	std::max((int)y1,(int)y2) - std::min((int)y1,(int)y2);
-		SDL_SetRenderDrawColor(renderer,r,g,b,a);
+		SDL_SetRenderDrawColor(renderer,(uint8_t)(float(r)*falpha),(uint8_t)(float(g)*falpha),(uint8_t)(float(b)*falpha),(uint8_t)(float(a)*falpha));
 		SDL_RenderFillRect(renderer,&rect);
 
-		SDL_SetRenderDrawColor(renderer,250,50,50,50);
-		SDL_RenderRect(renderer,&rect);
+		printf("float alpha = %f \n",falpha);
+		//SDL_SetRenderDrawColor(renderer,(uint8_t)(float(a)*falpha),(uint8_t)(float(a)*falpha),(uint8_t)(float(a)*falpha),(uint8_t)(float(a)*falpha));
+		//SDL_RenderRect(renderer,&rect);
 
 	}
 
@@ -748,12 +750,10 @@ struct auto_mapper {
 		// on baisse le canal alpha selon la distance à la cellule courante
 		// 		float alpha = 255./(1. + 0.025f* (std::powf( _partyX-x0+XP3 ,2) + std::powf( _partyY-y0+YP3 ,2)) );
 
-			a = 255/( 1 + 0.05 * std::sqrt((float) (deltaX*deltaX+deltaY*deltaY) ) );
+			a = 255./( 1 + 0.0002 * std::sqrt((float) (deltaX*deltaX+deltaY*deltaY) ) );
 			r = 190;
 			b = 190;
 			g = 190;
-
-
 		bool test = room->content == RoomContent::visited ||
 									 room->content == RoomContent::stone ||
 									 room->content == RoomContent::visible ||
@@ -803,7 +803,8 @@ struct auto_mapper {
 				//alpha = 255/( 1 + exp(  0.1 * ( ((xp1-_xc)*(xp1-_xc) + (yp1-_yc)*(yp1-_yc)  )/_Radius2 ))  );
 				// source quadratique
 				//alpha = 255/( 1 + (  0.25 * ( ((xp1-_xc)*(xp1-_xc) + (yp1-_yc)*(yp1-_yc)  )/_Radius2 ))  );
-				alpha = 255/( 1 + ( 0.05f *  ( ((xp1-_xc)*(xp1-_xc) + (yp1-_yc)*(yp1-_yc)  )/_Radius2 ))  );
+				alpha = 255/( 1 + ( 0.0002f *  ( ((xp1-_xc)*(xp1-_xc) + (yp1-_yc)*(yp1-_yc)  )/_Radius2 ))  );
+				printf("alpha   = %i \n",(int)a);
 				draw_a_box(xp1,yp1,xp2,yp2,rr,gg,bb,alpha);
 				//DrawOnScreen();
 			}
@@ -850,7 +851,7 @@ struct auto_mapper {
 
 		}
 
-
+		/*
 		SDL_SetRenderDrawColor(renderer,r,g,b,a);
 		if ( room->walls[0] ) // south wall ?
 		{
@@ -868,7 +869,7 @@ struct auto_mapper {
 		{
 			SDL_RenderLine(renderer,x0 + XP1 ,y0 + YP1,x0 + XP2,y0 + YP2);
 		}
-
+		*/
 
 	//	if ( room->containsAmonster )
 	//	{
