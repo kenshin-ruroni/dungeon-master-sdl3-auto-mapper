@@ -6,4 +6,5 @@ it currently support:
 - real time monsters tracking
 
 ![alt text](automapper.png)
-![alt text](automapper_1.png)
+
+![alt text](automapper_2.png)
