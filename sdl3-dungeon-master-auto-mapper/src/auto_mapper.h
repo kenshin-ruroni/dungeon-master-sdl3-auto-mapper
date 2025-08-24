@@ -6,13 +6,14 @@
  */
 
 #pragma once
-
+#include <deque>
 #include <cstdint>
 #include <cmath>
 #include <stddef.h>
 #include <cstdio>
 #include <algorithm>
-
+#include <cstring>
+#include <iostream>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_ttf.h>
 
@@ -21,8 +22,8 @@
 
 #define PADDING_X 10
 #define PADDING_Y 10
-#define SIZE_OF_BOX 20
-#define SIZE_OF_TILE 10 // une cellule est découpée en petits carres de cote tile_size_box
+#define SIZE_OF_BOX 10
+#define SIZE_OF_TILE 5 // une cellule est découpée en petits carres de cote tile_size_box
 #define LIGHT_RADIUS 5
 
 #define MAX_MONSTER_Y 5
@@ -61,6 +62,7 @@ struct Level
 	uint16_t _numberOFMonsters;
 	int16_t sizeX;
 	int16_t sizeY;
+	int16_t numberOfTile;
 };
 
 // rotations pour tenir du parametre facing
@@ -94,7 +96,10 @@ struct auto_mapper {
 
 	int16_t _Radius, _Radius2;
 
-	TTF_Font *_font;
+	TTF_Font *font_18;
+	TTF_Font *font_12;
+
+	std::deque<char *> messages;
 
 int number_of_boxes ;
 
@@ -150,13 +155,17 @@ int number_of_boxes ;
 	TTF_TextEngine *ttf_text_engine;
 	inline void initialize()
 	{
+		msg_str ="";
 		if (!TTF_Init())
 			{
 				SDL_Log("error initializing SDL TTF %s \n",SDL_GetError());
 				// Handle error...
 			}
-			if(	(_font = TTF_OpenFont("BruceForeverRegular.ttf", 12)) == NULL){
+			if(	(font_18 = TTF_OpenFont("BruceForeverRegular.ttf", 18)) == NULL){
 				SDL_Log(" auto mmapper font not found.");exit(-1);
+			}
+			if(	(font_12 = TTF_OpenFont("BruceForeverRegular.ttf", 12)) == NULL){
+			SDL_Log(" auto mmapper font not found.");exit(-1);
 			}
 		SDL_CreateWindowAndRenderer("auto mapper",width,height,SDL_WINDOW_RESIZABLE|SDL_WINDOW_HIGH_PIXEL_DENSITY|SDL_WINDOW_MOUSE_CAPTURE,&window,&renderer);
 		grid = SDL_CreateSurface(width,height,SDL_PIXELFORMAT_BGRA32);
@@ -391,14 +400,30 @@ int number_of_boxes ;
 	}
 	pan_to_party_position();
 }
+	#define MAX_MESSAGES 4
 
+	const char text[256]={0};
+	std::string msg_str;
+	inline void register_monster(char *monster_name,int16_t x,int16_t y)
+	{
+		if ( messages.size() >= MAX_MESSAGES){
+			messages.pop_back();
+		}
+		snprintf((char *)text,256,"a %s has been found nearby at position (%i,%i) \n",monster_name,x,y);
+		messages.emplace_front(text);
+		msg_str ="";
+		for (auto i = messages.begin();i!=messages.end();i++){
+			msg_str+= *i;
+		}
+	}
 
 	Monster *m = NULL;
 	Level * level = NULL;
-	bool monster_is_not_visible_by_party ;
+	bool monster_is_visible_by_party ;
 	bool monster_is_in_vicinity ;
 	void inline update_positions_of_nearby_monsters(const char *monster_name, DB1 *monster, int16_t x,int16_t y)
 	{
+		monster_is_visible_by_party = false;
 		m = NULL;
 		Level * level =  (Level *) (_levels +_currentLevel);
 		int16_t oldX = x,oldY = y;
@@ -476,8 +501,8 @@ int number_of_boxes ;
 					// on indique que la salle x,y contient le monstre
 					rooms[x + _numberOfBoxX * y].containsAmonster = true;
 					monster_is_in_vicinity = std::abs(m->x - _partyX) <= MAX_MONSTER_X && std::abs(m->y - _partyY) <= MAX_MONSTER_Y; 
-					monster_is_not_visible_by_party = TestDirectPathOpen(m->x,m->y,_partyX,_partyY,StoneOrClosedFalseWall) == 0 || TestDirectPathOpen(m->x,m->y,_partyX,_partyY,BlockedTypeAHacked) == 0;		
-					rooms[x + _numberOfBoxX * y].MonsterIsVisible = !monster_is_not_visible_by_party && monster_is_in_vicinity;
+					monster_is_visible_by_party = TestDirectPathOpen(m->x,m->y,_partyX,_partyY,StoneOrClosedFalseWall) != 0 || TestDirectPathOpen(m->x,m->y,_partyX,_partyY,BlockedTypeAHacked) != 0;		
+					rooms[x + _numberOfBoxX * y].MonsterIsVisible = monster_is_visible_by_party && monster_is_in_vicinity;
 					draw_room(x + _numberOfBoxX * y,x,y);
 	
 	//		// le monstre ne peut etre visible
@@ -490,14 +515,14 @@ int number_of_boxes ;
 	//		draw_room(x + _numberOfBoxX * y,x,y);
 	//		DrawOnScreen();
 
-		printf("a %s has been found nearby at position (%i,%i) \n",monster_name,x,y);
+			register_monster((char *)monster_name,x,y);
 			pan_to_party_position();
 			return;
 		}
 
 
 
-		rooms[x + _numberOfBoxX * y].MonsterIsVisible = monster_is_not_visible_by_party;
+		rooms[x + _numberOfBoxX * y].MonsterIsVisible = monster_is_visible_by_party && monster_is_in_vicinity;
 	
 		// le monstre a bouge ???
 		if (  m->x != x || m->y != y )
@@ -641,25 +666,31 @@ int number_of_boxes ;
 	SDL_FRect rect = {};
 	void inline draw_a_box(int16_t x1, int16_t y1,int x2, int16_t y2,uint8_t r,uint8_t g, uint8_t b,uint8_t a)
 	{
+		// 2 triangles to draw a box
 		float falpha = float(a)/255.;
-		rect.x = std::min((int)x1,(int)x2);
-		rect.y = std::min((int)y1,(int)y2);
-		rect.w = 	std::max((int)x1,(int)x2) - std::min((int)x1,(int)x2);
-		rect.h = 	std::max((int)y1,(int)y2) - std::min((int)y1,(int)y2);
 		SDL_SetRenderDrawColor(renderer,(uint8_t)(float(r)*falpha),(uint8_t)(float(g)*falpha),(uint8_t)(float(b)*falpha),(uint8_t)(float(a)*falpha));
-		SDL_RenderFillRect(renderer,&rect);
+		int w = 	std::max((int)x1,(int)x2) - std::min((int)x1,(int)x2);
+		int h = 	std::max((int)y1,(int)y2) - std::min((int)y1,(int)y2);
+		vertices[0] = {.position={(float)x1,(float)y1},.color = {(float)r/255.f *falpha,(float)g/255.f*falpha,(float)b/255.f*falpha,(float)a/255.f*falpha}};
+		vertices[1] = {.position={(float)(x1 + w),(float)y1},.color = {(float)r/255.f*falpha,(float)g/255.f*falpha,(float)b/255.f*falpha,(float)a/255.f*falpha}};
+		vertices[2] = {.position={(float)(x1+w),(float)(y1+h)},.color = {(float)r/255.f*falpha,(float)g/255.f*falpha,(float)b/255.f*falpha,(float)a/255.f*falpha}};
+		vertices[3] = {.position={(float)x1,(float)y1},.color = {(float)r/255.f *falpha,(float)g/255.f*falpha,(float)b/255.f*falpha,(float)a/255.f*falpha}};
+		vertices[4] = {.position={(float)(x1+w),(float)(y1+h)},.color = {(float)r/255.f*falpha,(float)g/255.f*falpha,(float)b/255.f*falpha,(float)a/255.f*falpha}};
+		vertices[5] = {.position={(float)x1,(float)(y1+h)},.color = {(float)r/255.f*falpha,(float)g/255.f*falpha,(float)b/255.f*falpha,(float)a/255.f*falpha}};
+		SDL_RenderGeometry(renderer,NULL,vertices,6,NULL,0);
 
 		//SDL_SetRenderDrawColor(renderer,(uint8_t)(float(a)*falpha),(uint8_t)(float(a)*falpha),(uint8_t)(float(a)*falpha),(uint8_t)(float(a)*falpha));
 		//SDL_RenderRect(renderer,&rect);
 
 	}
 
-	 SDL_Vertex vertices[43];
+	 SDL_Vertex vertices[6];
 	void inline draw_a_filled_triangle(int16_t x1, int16_t y1,int x2, int16_t y2,int x3, int16_t y3,uint8_t r,uint8_t g, uint8_t b,uint8_t a)
 	{
 		vertices[0] = {.position={(float)x1,(float)y1},.color = {(float)r/255.f,(float)g/255.f,(float)b/255.f,(float)a/255.f}};
 		vertices[1] = {.position={(float)x2,(float)y2},.color = {(float)r/255.f,(float)g/255.f,(float)b/255.f,(float)a/255.f}};
 		vertices[2] = {.position={(float)x3,(float)y3},.color = {(float)r/255.f,(float)g/255.f,(float)b/255.f,(float)a/255.f}};
+
 		SDL_RenderGeometry(renderer,NULL,vertices,3,NULL,0);
 	}
 
@@ -801,7 +832,7 @@ int number_of_boxes ;
 				//alpha = 255/( 1 + exp(  0.1 * ( ((xp1-_xc)*(xp1-_xc) + (yp1-_yc)*(yp1-_yc)  )/_Radius2 ))  );
 				// source quadratique
 				//alpha = 255/( 1 + (  0.25 * ( ((xp1-_xc)*(xp1-_xc) + (yp1-_yc)*(yp1-_yc)  )/_Radius2 ))  );
-				alpha = 255/( 1 + ( 0.001f/(1.0f+number_of_tiles) *  ( ((xp1-_xc)*(xp1-_xc) + (yp1-_yc)*(yp1-_yc)  )/_Radius2 ))  );
+				alpha = 255/( 1 + ( 0.01f/(1.0f+number_of_tiles) *  ( ((xp1-_xc)*(xp1-_xc) + (yp1-_yc)*(yp1-_yc)  )/_Radius2 ))  );
 				draw_a_box(xp1,yp1,xp2,yp2,rr,gg,bb,alpha);
 				//DrawOnScreen();
 			}
@@ -1020,7 +1051,7 @@ int number_of_boxes ;
 
 		// on sauvegarde le sizeofBox du level en cours
 		_levels[newLevel].sizeOfBox = sizeOfBox;
-
+		_levels[newLevel].numberOfTile = numberOfTile;
 		// on reset le size of box
 		//sizeOfBox = SIZE_OF_BOX;
 		//numberOfTile = sizeOfBox/SIZE_OF_TILE;
@@ -1030,13 +1061,11 @@ int number_of_boxes ;
 		// on sauvegarde le sizeofBox du level en cours
 		_levels[_currentLevel].sizeOfBox = sizeOfBox;
 		// oui on le recupere
-
 		rooms = _levels[newLevel].map ;
 		sizeOfBox = _levels[newLevel].sizeOfBox;
-		numberOfTile = sizeOfBox/SIZE_OF_TILE;
+		numberOfTile = _levels[_currentLevel].numberOfTile;
+		number_of_tiles = numberOfTile * numberOfTile;
 	}
-
-
 
 	_currentLevel = newLevel;
 	pan_to_party_position();
@@ -1520,25 +1549,29 @@ int number_of_boxes ;
 	//DrawOnScreen();
 }
 
-	const char text[200]={0};
+
 	TTF_Text *ttf_text;
+	TTF_Text *msg_text;
 	void inline render()
 	{
 		// Load a font
 
-		SDL_Color text_color = {255, 255, 255,255};
+		SDL_Color text_color = {255, 255, 0,255};
 		SDL_Rect textLocation = { 10, 10, 0, 0 };
 
-		sprintf((char *)text, " location Room At (%u,%u)",_partyX,_partyY );
-		ttf_text = TTF_CreateText(ttf_text_engine,_font,text,strlen(text));
-
+		sprintf((char *)text, " location Room At (%u,%u) \n level #%i",_partyX,_partyY, _currentLevel );
+		ttf_text = TTF_CreateText(ttf_text_engine,font_18,text,strlen(text));
+		msg_text = TTF_CreateText(ttf_text_engine,font_12,msg_str.c_str(),msg_str.size());
+		TTF_SetTextColor(ttf_text,255,255,0,255);
 		SDL_RenderLine(renderer, 1, 1,width - 1, 1 );
 		SDL_RenderLine(renderer, 1, 1 , 1, height - 1 );
 		SDL_RenderLine(renderer,  1,height - 1 ,  height - 1 ,height -1 );
 		SDL_RenderLine(renderer, width -1,  height- 1, width -1, 1 );
 		TTF_DrawRendererText(ttf_text,10,10);
+		TTF_DrawRendererText(msg_text,10,height-MAX_MESSAGES * 12);
 		render_texture();
 		TTF_DestroyText(ttf_text);
+		TTF_DestroyText(msg_text);
 	}
 
 	void inline render_texture(){
