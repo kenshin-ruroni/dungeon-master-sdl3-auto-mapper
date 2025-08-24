@@ -23,7 +23,7 @@
 #define PADDING_X 10
 #define PADDING_Y 10
 #define SIZE_OF_BOX 10
-#define SIZE_OF_TILE 5 // une cellule est découpée en petits carres de cote tile_size_box
+#define SIZE_OF_TILE 4 // une cellule est découpée en petits carres de cote tile_size_box
 #define LIGHT_RADIUS 5
 
 #define MAX_MONSTER_Y 5
@@ -79,6 +79,7 @@ struct Level
 static int32_t cosinus[4] = {-1,0,1,0};
 static int32_t   sinus[4] = {0,1,0,-1};
 
+static SDL_Mutex *lock_messages = SDL_CreateMutex();
 	
 struct auto_mapper {
 
@@ -99,10 +100,9 @@ struct auto_mapper {
 	TTF_Font *font_18;
 	TTF_Font *font_12;
 
-	std::deque<char *> messages;
+	std::deque<std::string> messages;
 
 int number_of_boxes ;
-
 
 	auto_mapper()
 	{
@@ -150,9 +150,26 @@ int number_of_boxes ;
 
 	}
 
+	static uint32_t clean_messages(void *userdata, SDL_TimerID timerID, Uint32 interval){
+		auto_mapper *autoMapper = (auto_mapper *) userdata;
+		if (!SDL_TryLockMutex(lock_messages) )
+		{
+			return 30000;
+		}
+		if (autoMapper->messages.size() != 0 )
+		{
+			autoMapper->messages.pop_back();
+			autoMapper->update_messages();
+			autoMapper->render_messages();
+		}
+		SDL_UnlockMutex(lock_messages);
+		return 30000;
+	}
+
 	SDL_Window *window;
 	SDL_Texture *texture;
 	TTF_TextEngine *ttf_text_engine;
+	SDL_TimerID lock_message_timer;
 	inline void initialize()
 	{
 		msg_str ="";
@@ -171,7 +188,8 @@ int number_of_boxes ;
 		grid = SDL_CreateSurface(width,height,SDL_PIXELFORMAT_BGRA32);
 		texture = SDL_CreateTextureFromSurface(renderer,grid);
 		ttf_text_engine = 	TTF_CreateRendererTextEngine(renderer);
-	render();
+		lock_message_timer = SDL_AddTimer(30000,clean_messages,(void *)this);
+		render();
 
 	}
 
@@ -404,13 +422,30 @@ int number_of_boxes ;
 
 	const char text[256]={0};
 	std::string msg_str;
+	std::string new_message;
 	inline void register_monster(char *monster_name,int16_t x,int16_t y)
 	{
+		if (!SDL_TryLockMutex(lock_messages) )
+		{
+			return;
+		}
+		memset((void *)text,0,256);
+		snprintf((char *)text,256,"a %s has been found nearby at position (%i,%i) \n",monster_name,x,y);
+		new_message = text;
+		printf("new message %s \n",text);
+		if (std::find(messages.begin(), messages.end(), new_message) != messages.end()){
+			return;
+		}
 		if ( messages.size() >= MAX_MESSAGES){
 			messages.pop_back();
 		}
-		snprintf((char *)text,256,"a %s has been found nearby at position (%i,%i) \n",monster_name,x,y);
-		messages.emplace_front(text);
+		messages.emplace_front(new_message);
+		update_messages();
+		render();
+		SDL_UnlockMutex(lock_messages);
+	}
+
+	inline void update_messages(){
 		msg_str ="";
 		for (auto i = messages.begin();i!=messages.end();i++){
 			msg_str+= *i;
@@ -499,11 +534,11 @@ int number_of_boxes ;
 						m->y = y;
 					}
 					// on indique que la salle x,y contient le monstre
-					rooms[x + _numberOfBoxX * y].containsAmonster = true;
+					rooms[m->x + _numberOfBoxX * m->y].containsAmonster = true;
 					monster_is_in_vicinity = std::abs(m->x - _partyX) <= MAX_MONSTER_X && std::abs(m->y - _partyY) <= MAX_MONSTER_Y; 
 					monster_is_visible_by_party = TestDirectPathOpen(m->x,m->y,_partyX,_partyY,StoneOrClosedFalseWall) != 0 || TestDirectPathOpen(m->x,m->y,_partyX,_partyY,BlockedTypeAHacked) != 0;		
-					rooms[x + _numberOfBoxX * y].MonsterIsVisible = monster_is_visible_by_party && monster_is_in_vicinity;
-					draw_room(x + _numberOfBoxX * y,x,y);
+					rooms[m->x + _numberOfBoxX * m->y].MonsterIsVisible = monster_is_visible_by_party && monster_is_in_vicinity;
+					draw_room(m->x + _numberOfBoxX * m->y,m->x,m->y);
 	
 	//		// le monstre ne peut etre visible
 	//		if ( !rooms[x + _numberOfBoxX * y].MonsterIsVisible )
@@ -514,8 +549,10 @@ int number_of_boxes ;
 	//		rooms[x + _numberOfBoxX * y].MonsterIsVisible = false;
 	//		draw_room(x + _numberOfBoxX * y,x,y);
 	//		DrawOnScreen();
-
-			register_monster((char *)monster_name,x,y);
+			if ( monster_is_visible_by_party && monster_is_in_vicinity)
+			{
+				register_monster((char *)monster_name,x,y);
+			}
 			pan_to_party_position();
 			return;
 		}
@@ -1549,6 +1586,16 @@ int number_of_boxes ;
 	//DrawOnScreen();
 }
 
+	SDL_FRect rr={.x=10,.y = height-(MAX_MESSAGES +1 ) * 12,.w=width,.h = (MAX_MESSAGES +1 ) * 12};
+	inline void render_messages(){
+		if ( msg_str.size() == 0){
+			SDL_RenderFillRect(renderer,&rr);
+			return;
+		}
+		msg_text = TTF_CreateText(ttf_text_engine,font_12,msg_str.c_str(),msg_str.size());
+		TTF_DrawRendererText(msg_text,10,height-(MAX_MESSAGES +1 ) * 12);
+		TTF_DestroyText(msg_text);
+	}
 
 	TTF_Text *ttf_text;
 	TTF_Text *msg_text;
@@ -1561,17 +1608,16 @@ int number_of_boxes ;
 
 		sprintf((char *)text, " location Room At (%u,%u) \n level #%i",_partyX,_partyY, _currentLevel );
 		ttf_text = TTF_CreateText(ttf_text_engine,font_18,text,strlen(text));
-		msg_text = TTF_CreateText(ttf_text_engine,font_12,msg_str.c_str(),msg_str.size());
+		
 		TTF_SetTextColor(ttf_text,255,255,0,255);
 		SDL_RenderLine(renderer, 1, 1,width - 1, 1 );
 		SDL_RenderLine(renderer, 1, 1 , 1, height - 1 );
 		SDL_RenderLine(renderer,  1,height - 1 ,  height - 1 ,height -1 );
 		SDL_RenderLine(renderer, width -1,  height- 1, width -1, 1 );
 		TTF_DrawRendererText(ttf_text,10,10);
-		TTF_DrawRendererText(msg_text,10,height-MAX_MESSAGES * 12);
+		render_messages();
 		render_texture();
 		TTF_DestroyText(ttf_text);
-		TTF_DestroyText(msg_text);
 	}
 
 	void inline render_texture(){
