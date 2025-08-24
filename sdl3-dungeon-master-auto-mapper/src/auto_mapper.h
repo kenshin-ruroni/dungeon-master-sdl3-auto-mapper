@@ -154,7 +154,7 @@ int number_of_boxes ;
 		auto_mapper *autoMapper = (auto_mapper *) userdata;
 		if (!SDL_TryLockMutex(lock_messages) )
 		{
-			return 30000;
+			return 10000;
 		}
 		if (autoMapper->messages.size() != 0 )
 		{
@@ -163,7 +163,7 @@ int number_of_boxes ;
 			autoMapper->render_messages();
 		}
 		SDL_UnlockMutex(lock_messages);
-		return 30000;
+		return 10000;
 	}
 
 	SDL_Window *window;
@@ -188,7 +188,7 @@ int number_of_boxes ;
 		grid = SDL_CreateSurface(width,height,SDL_PIXELFORMAT_BGRA32);
 		texture = SDL_CreateTextureFromSurface(renderer,grid);
 		ttf_text_engine = 	TTF_CreateRendererTextEngine(renderer);
-		lock_message_timer = SDL_AddTimer(30000,clean_messages,(void *)this);
+		lock_message_timer = SDL_AddTimer(10000,clean_messages,(void *)this);
 		render();
 
 	}

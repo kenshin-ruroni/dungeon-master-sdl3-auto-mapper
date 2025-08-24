@@ -932,11 +932,29 @@ void UI_SetDIBitsToDevice(
 //                      &dstPixels,
 //                      &pitch))
 
+
+
+uint8_t *p;
+    for (int y = 0; y < height;y++)
+  {
+    for (int x = 0; x < 2*width; x++)
+    {
+      p =  (uint8_t *)dstPixels +  (2 * dstX + x) + (dstY + y) * pitch;
+      *p= *(bitmap + x + 2 * 320 * y);
+      
+    }
+
+  }
+
+
+/*
   for (line=0; line<height; line++)
   {
     memcpy((ui8 *)dstPixels+2*dstX+pitch*(line+dstY),
            bitmap+2*320*(line), width*2);
   };
+*/
+  
   //SDL_RenderClear(sdlRenderer);
   return;
 }
